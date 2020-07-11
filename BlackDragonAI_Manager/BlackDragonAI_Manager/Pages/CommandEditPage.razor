@@ -80,7 +80,12 @@ else
         <ul>
             @foreach (var alias in Aliases)
             {
-                <li style="color: white;">@alias</li>
+                <li style="color: white;">
+                    <p>
+                        @alias.Substring(1)
+                        <button style="background-color: red;" @onclick="() => DeleteAlias(alias)">Remove</button>
+                    </p>
+                </li>
             }
         </ul>
         <EditForm model="@NewAlias" OnValidSubmit="CreateAlias">
@@ -152,9 +157,19 @@ else
     {
         if(InEditingMode)
         {
+            NewAlias.Alias = $"!{NewAlias.Alias}";
             await this.BlbApiHandler.AddAlias(this.Command.OriginalCommand, NewAlias.Alias);
-            this.Aliases = await GetAliases();
+            this.Aliases = Aliases.Append(NewAlias.Alias);
             this.NewAlias = new AliasInput();
+        }
+    }
+
+    public async Task DeleteAlias(string alias)
+    {
+        if(InEditingMode)
+        {
+            await this.BlbApiHandler.DeleteAlias(alias);
+            this.Aliases = this.Aliases.Where(a => !a.Equals(alias));
         }
     }
 }

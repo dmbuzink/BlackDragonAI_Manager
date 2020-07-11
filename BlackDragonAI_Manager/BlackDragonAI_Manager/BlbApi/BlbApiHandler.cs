@@ -58,7 +58,7 @@ namespace BlackDragonAI_Manager.BlbApi
             await (await CheckAuthentication()).AddAlias(this._jwt, commandName.Substring(1), new AliasInput() { Alias = alias });
 
         public async Task DeleteAlias(string alias) =>
-            await(await CheckAuthentication()).DeleteAlias(this._jwt, alias);
+            await(await CheckAuthentication()).DeleteAlias(this._jwt, alias.Substring(1));
 
         public async Task<IBlbApi> CheckAuthentication()
         {
