@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Text;
 using BlackDragonAI_Manager.BlbApi;
 using BlackDragonAI_Manager.Models;
+using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ namespace BlackDragonAI_Manager
             builder.Services.AddRefitClient<IBlbApi>(refitSettings).ConfigureHttpClient(httpClient => 
                 httpClient.BaseAddress = new Uri("https://blb-api.herokuapp.com/api"));
             builder.Services.AddSingleton<BlbApiHandler>();
+            builder.Services.AddSingleton<ILocalStorageService, LocalStorageService>();
 
             await builder.Build().RunAsync();
         }

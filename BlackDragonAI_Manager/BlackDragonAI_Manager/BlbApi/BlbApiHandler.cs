@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 using BlackDragonAI_Manager.BlbApi.Models;
+using Blazored.LocalStorage;
 using Newtonsoft.Json;
 using Refit;
 
@@ -15,10 +16,12 @@ namespace BlackDragonAI_Manager.BlbApi
         private string _jwt;
         private User _user;
         private Timer _timer;
+        private readonly ILocalStorageService _localStorageService;
 
-        public BlbApiHandler(IBlbApi blbApi)
+        public BlbApiHandler(IBlbApi blbApi, ILocalStorageService storageService)
         {
             this._blbApi = blbApi;
+            this._localStorageService = storageService;
         }
 
         public void SetupUser(User user)
@@ -39,23 +42,34 @@ namespace BlackDragonAI_Manager.BlbApi
             return authResult;
         }
 
-        public Task<IEnumerable<CommandDetails>> GetAllCommands() =>
-            _blbApi.GetCommands(this._jwt);
+        public async Task<IEnumerable<CommandDetails>> GetAllCommands() =>
+            await (await CheckAuthentication()).GetCommands(this._jwt);
 
-        public Task<CommandDetails> CreateCommand(CommandDetails commandDetails) =>
-            _blbApi.CreateCommand(this._jwt, commandDetails);
+        public async Task<CommandDetails> CreateCommand(CommandDetails commandDetails) =>
+            await(await CheckAuthentication()).CreateCommand(this._jwt, commandDetails);
 
-        public Task<CommandDetails> EditCommand(CommandDetails commandDetails) =>
-            _blbApi.EditCommand(this._jwt, commandDetails);
+        public async Task<CommandDetails> EditCommand(CommandDetails commandDetails) =>
+            await(await CheckAuthentication()).EditCommand(this._jwt, commandDetails);
 
-        public Task DeleteCommand(string commandName) =>
-            _blbApi.DeleteCommand(this._jwt, commandName);
+        public async Task DeleteCommand(string commandName) =>
+            await(await CheckAuthentication()).DeleteCommand(this._jwt, commandName);
 
-        public Task AddAlias(string commandName, string alias) =>
-            _blbApi.AddAlias(this._jwt, commandName, new AliasInput() { Alias = alias });
+        public async Task AddAlias(string commandName, string alias) =>
+            await (await CheckAuthentication()).AddAlias(this._jwt, commandName, new AliasInput() { Alias = alias });
 
-        public Task DeleteAlias(string alias) =>
-            _blbApi.DeleteAlias(this._jwt, alias);
+        public async Task DeleteAlias(string alias) =>
+            await(await CheckAuthentication()).DeleteAlias(this._jwt, alias);
+
+        public async Task<IBlbApi> CheckAuthentication()
+        {
+            const string storageKey = "user";
+            if(this._jwt == null && await this._localStorageService.ContainKeyAsync(storageKey))
+            {
+                this._user = await this._localStorageService.GetItemAsync<User>(storageKey);
+                await Authenticate();
+            }
+            return this._blbApi;
+        }
     }
 
     public static class BlbApiExtensions

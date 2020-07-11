@@ -1,8 +1,10 @@
 ﻿@page "/login"
 @using BlackDragonAI_Manager.BlbApi
 @using BlackDragonAI_Manager.BlbApi.Models
+@using Refit
 @inject BlbApiHandler BlbApiHandler
 @inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
 
 <link href="css/loginPage.min.css" rel="stylesheet">
 
@@ -35,10 +37,20 @@
     public async Task SubmitLogin()
     {
         BlbApiHandler.SetupUser(_user);
-        var result = await BlbApiHandler.Authenticate();
-        Console.WriteLine("Successfully logged in");
-        Console.WriteLine($"Token: {result.Token}");
-        
-        NavigationManager.NavigateTo("commands");
+        try
+        {
+            var result = await BlbApiHandler.Authenticate();
+            Console.WriteLine("Successfully logged in");
+            Console.WriteLine($"Token: {result.Token}");
+
+            await LocalStorageService.SetItemAsync<User>("user", this._user);
+
+            NavigationManager.NavigateTo("commands");
+        }
+        catch(ApiException apiException)
+        {
+            var apiError = apiException.ToBlbApiError();
+
+        }
     }
 }
