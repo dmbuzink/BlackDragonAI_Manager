@@ -1,6 +1,10 @@
 ﻿@page "/login"
-@using BlackDragonAI_Manager.Models
+@using BlackDragonAI_Manager.BlbApi
+@using BlackDragonAI_Manager.BlbApi.Models
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
 
+<link href="css/loginPage.min.css" rel="stylesheet">
 
 <h3>Login</h3>
 <div>
@@ -9,14 +13,14 @@
         <ValidationSummary />
         <p>
             <label>
-                Username: 
+                Username:
                 <InputText id="username" @bind-Value="_user.Username" />
             </label>
         </p>
 
         <p>
             <label>
-                Password: 
+                Password:
                 <InputText id="password" @bind-Value="_user.Password" />
             </label>
         </p>
@@ -28,8 +32,13 @@
 @code {
     private User _user = new User();
 
-    public void SubmitLogin()
+    public async Task SubmitLogin()
     {
-        Console.WriteLine("Submitted");
+        BlbApiHandler.SetupUser(_user);
+        var result = await BlbApiHandler.Authenticate();
+        Console.WriteLine("Successfully logged in");
+        Console.WriteLine($"Token: {result.Token}");
+        
+        NavigationManager.NavigateTo("commands");
     }
 }

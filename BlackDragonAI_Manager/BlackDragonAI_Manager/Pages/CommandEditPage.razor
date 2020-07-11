@@ -1,0 +1,71 @@
+﻿@page "/commands/{CommandName}"
+@using BlackDragonAI_Manager.BlbApi
+@using BlackDragonAI_Manager.BlbApi.Models
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+
+<h3>Edit Command</h3>
+@* <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand)" style="cursor: pointer !important"> *@
+@*          <div class="card-body card-space"> *@
+@*              <h5 class="card-title">@Command.OriginalCommand</h5> *@
+@*              <p>@Command.Message</p> *@
+@*          </div> *@
+@*      </div> *@
+
+    @if (Command != null)
+    {
+        <EditForm model="@Command" OnValidSubmit="SaveEdit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <p>
+                <label>
+                    Command name: @Command.Command
+                </label>
+            </p>
+            <p>
+                <label style="text-align: center; position: relative; top: -40px;">
+                    Message: 
+                </label>
+                
+                <InputTextArea style="width: 400px; height: 80px;" @bind-Value="Command.Message" />
+            </p>
+            <p>
+                <label>
+                    Permission:
+                    <InputSelect @bind-Value="Command.Permission" >
+                        <option value="@EPermission.EVERYONE">Everyone</option>
+                        <option value="@EPermission.SUBS">Subs</option>
+                        <option value="@EPermission.MODS">Moderators</option>
+                        <option value="@EPermission.ADMIN">Admins</option>
+                    </InputSelect>
+                </label>
+            </p>
+            <p>
+                <label>
+                    Message: 
+                    <InputNumber @bind-Value="Command.Timer" />
+                </label>
+            </p>
+            <button type="submit">Save</button>
+        </EditForm>
+    }
+
+@code {
+    [Parameter] public string CommandName { get; set; }
+    public CommandDetails Command;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var commandFromApi = (await this.BlbApiHandler.GetAllCommands()).FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
+        if (commandFromApi != null)
+        {
+            Command = commandFromApi;
+        }
+    }
+
+    public async Task SaveEdit()
+    {
+        await this.BlbApiHandler.EditCommand(Command);
+        NavigationManager.NavigateTo("commands");
+    }
+}

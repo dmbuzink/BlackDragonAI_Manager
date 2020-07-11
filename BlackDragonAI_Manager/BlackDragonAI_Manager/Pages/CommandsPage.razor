@@ -1,0 +1,38 @@
+﻿@page "/commands"
+@using BlackDragonAI_Manager.BlbApi
+@using BlackDragonAI_Manager.BlbApi.Models
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+
+<h1>Commands</h1>
+
+<div>
+    @if (_distinctCommands != null)
+    {
+        @foreach (var command in _distinctCommands)
+        {
+            <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand)" style="cursor: pointer !important">
+                <div class="card-body card-space">
+                    <h5 class="card-title">@command.OriginalCommand</h5>
+                    <p>@command.Message</p>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private IEnumerable<CommandDetails> _commands;
+    private IEnumerable<CommandDetails> _distinctCommands;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this._commands = await this.BlbApiHandler.GetAllCommands();
+        this._distinctCommands = this._commands.Where(c => c.Command.Equals(c.OriginalCommand));
+    }
+
+    public void GoToCommandEditPage(string commandName)
+    {
+        this.NavigationManager.NavigateTo($"commands/{commandName}");
+    }
+}

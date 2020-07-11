@@ -2,5 +2,9 @@
   {
     "outputFile": "wwwroot/css/main.css",
     "inputFile": "Styles/main.scss"
+  },
+  {
+    "outputFile": "wwwroot/css/loginPage.css",
+    "inputFile": "Styles/loginPage.scss"
   }
 ]

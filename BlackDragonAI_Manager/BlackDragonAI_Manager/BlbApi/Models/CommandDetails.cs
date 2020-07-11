@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
+using BlackDragonAI_Manager.Models;
 
-namespace BlackDragonAI_Manager.Models
+namespace BlackDragonAI_Manager.BlbApi.Models
 {
     public class CommandDetails
     {
@@ -25,6 +22,7 @@ namespace BlackDragonAI_Manager.Models
         public EPermission Permission { get; set; } = EPermission.EVERYONE;
         
         [Required]
-        public uint Timer { get; set; } = 60;
+        [Range(0, int.MaxValue, ErrorMessage = "The cooldown timer should be set for a number bigger than 0")]
+        public int Timer { get; set; } = 60;
     }
 }
