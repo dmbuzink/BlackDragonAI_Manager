@@ -21,7 +21,10 @@
     }
 </div>
 
+<img src="images/PlusIcon.png" @onclick="() => GoToCommandEditPage(_newCommandString)" style="position: fixed; z-index: 1; bottom: 0; right: 0; width: 215px; height: 215px; margin-right: 30px; margin-bottom: 30px; cursor: pointer">
+
 @code {
+    private readonly string _newCommandString = "new";
     private IEnumerable<CommandDetails> _commands;
     private IEnumerable<CommandDetails> _distinctCommands;
 
@@ -35,4 +38,5 @@
     {
         this.NavigationManager.NavigateTo($"commands/{commandName}");
     }
+
 }

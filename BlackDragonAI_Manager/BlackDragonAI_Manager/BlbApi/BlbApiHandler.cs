@@ -52,7 +52,7 @@ namespace BlackDragonAI_Manager.BlbApi
             await(await CheckAuthentication()).EditCommand(this._jwt, commandDetails);
 
         public async Task DeleteCommand(string commandName) =>
-            await(await CheckAuthentication()).DeleteCommand(this._jwt, commandName);
+            await(await CheckAuthentication()).DeleteCommand(this._jwt, commandName.Substring(1));
 
         public async Task AddAlias(string commandName, string alias) =>
             await (await CheckAuthentication()).AddAlias(this._jwt, commandName, new AliasInput() { Alias = alias });

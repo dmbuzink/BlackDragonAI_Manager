@@ -4,7 +4,15 @@
 @inject BlbApiHandler BlbApiHandler
 @inject NavigationManager NavigationManager
 
-<h3>Edit Command</h3>
+@if (InEditingMode)
+{
+    <h3>Edit Command</h3>
+}
+else
+{
+    <h3>Create Command</h3>
+}
+
 @* <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand)" style="cursor: pointer !important"> *@
 @*          <div class="card-body card-space"> *@
 @*              <h5 class="card-title">@Command.OriginalCommand</h5> *@
@@ -12,60 +20,95 @@
 @*          </div> *@
 @*      </div> *@
 
-    @if (Command != null)
+@if (Command != null)
+{
+    <EditForm model="@Command" OnValidSubmit="SaveEdit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <p>
+            <label>
+                Command name:
+                @if (InEditingMode)
+                {
+                    @Command.Command
+                }
+                else
+                {
+                    <InputText @bind-Value="Command.Command"></InputText>
+                }
+            </label>
+        </p>
+        <p>
+            <label style="text-align: center; position: relative; top: -40px;">
+                Message:
+            </label>
+
+            <InputTextArea style="width: 400px; height: 80px;" @bind-Value="Command.Message" />
+        </p>
+        <p>
+            <label>
+                Permission:
+                <InputSelect @bind-Value="Command.Permission">
+                    <option value="@EPermission.EVERYONE">Everyone</option>
+                    <option value="@EPermission.SUBS">Subs</option>
+                    <option value="@EPermission.MODS">Moderators</option>
+                    <option value="@EPermission.ADMIN">Admins</option>
+                </InputSelect>
+            </label>
+        </p>
+        <p>
+            <label>
+                Cooldown timer:
+                <InputNumber @bind-Value="Command.Timer" />
+            </label>
+        </p>
+        @if (InEditingMode)
+        {
+            <button type="submit" style="font-size: 22px;">Save</button>
+        }
+        else
+        {
+            <button type="submit" style="font-size: 22px;">Create</button>
+        }
+    </EditForm>
+
+    @if (InEditingMode)
     {
-        <EditForm model="@Command" OnValidSubmit="SaveEdit">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
-            <p>
-                <label>
-                    Command name: @Command.Command
-                </label>
-            </p>
-            <p>
-                <label style="text-align: center; position: relative; top: -40px;">
-                    Message: 
-                </label>
-                
-                <InputTextArea style="width: 400px; height: 80px;" @bind-Value="Command.Message" />
-            </p>
-            <p>
-                <label>
-                    Permission:
-                    <InputSelect @bind-Value="Command.Permission" >
-                        <option value="@EPermission.EVERYONE">Everyone</option>
-                        <option value="@EPermission.SUBS">Subs</option>
-                        <option value="@EPermission.MODS">Moderators</option>
-                        <option value="@EPermission.ADMIN">Admins</option>
-                    </InputSelect>
-                </label>
-            </p>
-            <p>
-                <label>
-                    Message: 
-                    <InputNumber @bind-Value="Command.Timer" />
-                </label>
-            </p>
-            <button type="submit">Save</button>
-        </EditForm>
+        <button @onclick="Delete" style="font-size: 22px; background-color: red; position: fixed; right: 25px; top: 25px; height: 50px; width: 150px;">Delete</button>
     }
+}
 
 @code {
     [Parameter] public string CommandName { get; set; }
+    public bool InEditingMode;
     public CommandDetails Command;
 
     protected override async Task OnInitializedAsync()
     {
         var commandFromApi = (await this.BlbApiHandler.GetAllCommands()).FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
-        if (commandFromApi != null)
-        {
-            Command = commandFromApi;
-        }
+        this.InEditingMode = commandFromApi != null;
+        Command = this.InEditingMode ? commandFromApi : new CommandDetails() { Command = "!" };
     }
 
     public async Task SaveEdit()
     {
-        await this.BlbApiHandler.EditCommand(Command);
+        if (InEditingMode)
+        {
+            await this.BlbApiHandler.EditCommand(Command);
+        }
+        else
+        {
+            await this.BlbApiHandler.CreateCommand(Command);
+        }
         NavigationManager.NavigateTo("commands");
+    }
+
+    public async Task Delete()
+    {
+        if(InEditingMode)
+        {
+            await this.BlbApiHandler.DeleteCommand(this.Command.Command);
+            NavigationManager.NavigateTo("commands");
+        }
     }
 }
