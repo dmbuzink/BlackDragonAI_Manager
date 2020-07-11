@@ -1,0 +1,35 @@
+﻿@page "/login"
+@using BlackDragonAI_Manager.Models
+
+
+<h3>Login</h3>
+<div>
+    <EditForm Model="@_user" OnValidSubmit="SubmitLogin">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <p>
+            <label>
+                Username: 
+                <InputText id="username" @bind-Value="_user.Username" />
+            </label>
+        </p>
+
+        <p>
+            <label>
+                Password: 
+                <InputText id="password" @bind-Value="_user.Password" />
+            </label>
+        </p>
+
+        <button type="submit">log in</button>
+    </EditForm>
+</div>
+
+@code {
+    private User _user = new User();
+
+    public void SubmitLogin()
+    {
+        Console.WriteLine("Submitted");
+    }
+}
