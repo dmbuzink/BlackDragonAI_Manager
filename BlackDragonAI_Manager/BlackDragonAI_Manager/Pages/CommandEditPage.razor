@@ -75,6 +75,26 @@ else
     @if (InEditingMode)
     {
         <button @onclick="Delete" style="font-size: 22px; background-color: red; position: fixed; right: 25px; top: 25px; height: 50px; width: 150px;">Delete</button>
+
+        <h3 style="margin-top: 30px;">Aliases</h3>
+        <ul>
+            @foreach (var alias in Aliases)
+            {
+                <li style="color: white;">@alias</li>
+            }
+        </ul>
+        <EditForm model="@NewAlias" OnValidSubmit="CreateAlias">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <p>
+                <label>
+                    New alias:
+                    <InputText @bind-Value="NewAlias.Alias" />
+                    <button type="submit">Add</button>
+                </label>
+            </p>
+        </EditForm>
     }
 }
 
@@ -82,13 +102,29 @@ else
     [Parameter] public string CommandName { get; set; }
     public bool InEditingMode;
     public CommandDetails Command;
+    public IEnumerable<string> Aliases;
+    public AliasInput NewAlias = new AliasInput();
 
     protected override async Task OnInitializedAsync()
     {
-        var commandFromApi = (await this.BlbApiHandler.GetAllCommands()).FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
+        var allCommands = await this.BlbApiHandler.GetAllCommands();
+        var commandFromApi = allCommands.FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
         this.InEditingMode = commandFromApi != null;
-        Command = this.InEditingMode ? commandFromApi : new CommandDetails() { Command = "!" };
+        if(InEditingMode)
+        {
+            Aliases = allCommands.Where(c => c.OriginalCommand.Equals(commandFromApi.OriginalCommand) && !c.Command.Equals(commandFromApi.Command)).Select(c => c.Command);
+            Command = commandFromApi;
+        }
+        else
+        {
+            Command = new CommandDetails() { Command = "!" };
+        }
     }
+
+    private async Task<IEnumerable<string>> GetAliases() =>
+        (await this.BlbApiHandler.GetAllCommands())
+            .Where(c => c.OriginalCommand.Equals(this.Command.OriginalCommand) && !c.Command.Equals(this.Command.Command))
+            .Select(c => c.Command);
 
     public async Task SaveEdit()
     {
@@ -109,6 +145,16 @@ else
         {
             await this.BlbApiHandler.DeleteCommand(this.Command.Command);
             NavigationManager.NavigateTo("commands");
+        }
+    }
+
+    public async Task CreateAlias()
+    {
+        if(InEditingMode)
+        {
+            await this.BlbApiHandler.AddAlias(this.Command.OriginalCommand, NewAlias.Alias);
+            this.Aliases = await GetAliases();
+            this.NewAlias = new AliasInput();
         }
     }
 }
