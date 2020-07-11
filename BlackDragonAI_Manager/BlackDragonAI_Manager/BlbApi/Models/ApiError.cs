@@ -9,6 +9,6 @@ namespace BlackDragonAI_Manager.BlbApi.Models
     {
         public string Message { get; set; }
         public int Code { get; set; }
-        public DateTime DateTime { get; set; }
+        public string DateTime { get; set; }
     }
 }

@@ -8,31 +8,60 @@
 
 <link href="css/loginPage.min.css" rel="stylesheet">
 
-<h3>Login</h3>
 <div>
-    <EditForm Model="@_user" OnValidSubmit="SubmitLogin">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
-        <p>
-            <label>
-                Username:
-                <InputText id="username" @bind-Value="_user.Username" />
-            </label>
-        </p>
+    @if (_isAlreadyLoggedIn)
+    {
+        // Log out stuff
+        <h3>Hi @_user.Username</h3>
+        <button @onclick="LogOut">Log out</button>
+    }
+    else
+    {
+        <h3>Login</h3>
+        // Log in stuff
+        @if (_errorMessage != null)
+        {
+            <p style="color: red;">@_errorMessage</p>
+        }
+        <EditForm Model="@_user" OnValidSubmit="SubmitLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <p>
+                <label>
+                    Username:
+                    <InputText id="username" @bind-Value="_user.Username" />
+                </label>
+            </p>
 
-        <p>
-            <label>
-                Password:
-                <InputText id="password" @bind-Value="_user.Password" />
-            </label>
-        </p>
+            <p>
+                <label>
+                    Password:
+                    <InputText id="password" @bind-Value="_user.Password" />
+                </label>
+            </p>
 
-        <button type="submit">log in</button>
-    </EditForm>
+            <button type="submit">log in</button>
+        </EditForm>
+    }
 </div>
 
+
+
+
 @code {
+    private bool _isAlreadyLoggedIn;
     private User _user = new User();
+    private string _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        const string storageKey = "user";
+        if(await this.LocalStorageService.ContainKeyAsync(storageKey))
+        {
+            this._user = await this.LocalStorageService.GetItemAsync<User>(storageKey);
+            _isAlreadyLoggedIn = true;
+        }
+    }
 
     public async Task SubmitLogin()
     {
@@ -50,7 +79,15 @@
         catch(ApiException apiException)
         {
             var apiError = apiException.ToBlbApiError();
-
+            this._errorMessage = apiError.Message;
         }
     }
+
+    public async Task LogOut()
+    {
+        await this.LocalStorageService.RemoveItemAsync("user");
+        this._user = new User();
+        _isAlreadyLoggedIn = false;
+    }
+
 }
