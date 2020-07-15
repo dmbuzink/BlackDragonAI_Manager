@@ -1,0 +1,91 @@
+﻿@page "/timedmessages" 
+@inject BlbApiHandler BlbApiHandler
+@inject ILocalStorageService LocalStorageService
+@inject NavigationManager NavigationManager
+@inject NotificationManager NotificationManager
+
+<h3>Timed messages</h3>
+<ul>
+    @foreach (var tm in _timedMessages)
+    {
+        <li style="color: white;">
+            <p>
+                @tm.Command.Substring(1)
+                <button style="background-color: red;" @onclick="() => DeleteTimedMessage(tm.Command)">Remove</button>
+            </p>
+        </li>
+    }
+</ul>
+<EditForm model="@_newTimedMessage" OnValidSubmit="() => CreateTimedMessage(_newTimedMessage.Command)">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+     @if (_errorMessage != null)
+     {
+         <ul>
+             <li style="color: red;">
+                 <p style="color: red;">@_errorMessage</p>
+             </li>
+         </ul>
+     }
+
+    <p>
+        <label>
+            New timed message for:
+            <InputSelect @bind-Value="_newTimedMessage.Command">
+                @foreach(var command in _commandsToMakeTimedMessageFor)
+                {
+                    <option value="@command">@command</option>
+                }
+            </InputSelect>
+            <button type="submit">Add</button>
+        </label>
+    </p>
+</EditForm>
+
+@code {
+    private IEnumerable<TimedMessage> _timedMessages = new TimedMessage[0];
+    private TimedMessage _newTimedMessage = new TimedMessage();
+    private IEnumerable<string> _commandsToMakeTimedMessageFor = new string[0];
+    private string _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        await Setup();
+    }
+
+    private async Task Setup()
+    {
+        this._timedMessages = await this.BlbApiHandler.GetTimedMessage();
+        var timedMessagesCommand = this._timedMessages.Select(tm => tm.Command).ToHashSet();
+        _commandsToMakeTimedMessageFor = (await this.BlbApiHandler.GetAllCommands()).Select(c => c.OriginalCommand).Distinct().Where(c => !timedMessagesCommand.Contains(c)).Select(c => c.Substring(1));
+        StateHasChanged();
+    }
+
+    private async Task DeleteTimedMessage(string command)
+    {
+        await this.BlbApiHandler.DeleteTimedMessage(command);
+        NotificationManager.SetSuccessNotification($"The timed message for the command {command} has been successfully deleted");
+        await Setup();
+    }
+
+    private async Task CreateTimedMessage(string command)
+    {
+        try
+        {
+            await this.BlbApiHandler.CreateTimedMessage($"!{command}");
+            NotificationManager.SetSuccessNotification($"The timed message for the command {command} has been successfully created");
+            await Setup();
+        }
+        catch (ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            _errorMessage = apiError.Message;
+        }
+    }
+}

@@ -1,0 +1,47 @@
+﻿@page "/admin"
+@inject ILocalStorageService LocalStorageService
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+@inject NotificationManager NotificationManager
+
+<h3>Admin configuration</h3>
+@foreach (var user in Users)
+{
+        <p>
+            @user.Username: @Enum.GetName(typeof(EAuthorizationLevel), user.AuthorizationLevel)?.ToLower()
+            @if (user.AuthorizationLevel != EAuthorizationLevel.ADMIN)
+            {
+                <button @onclick="() => SaveAuthLevel(user.Username, EAuthorizationLevel.ADMIN)">Make admin</button>
+            }
+            @if (user.AuthorizationLevel != EAuthorizationLevel.MODERATOR)
+            {
+                <button @onclick="() => SaveAuthLevel(user.Username, EAuthorizationLevel.MODERATOR)">Make mod</button>
+            }
+            @if (user.AuthorizationLevel != EAuthorizationLevel.NONE)
+            {
+                <button @onclick="() => SaveAuthLevel(user.Username, EAuthorizationLevel.NONE)">Take permissions</button>
+            }
+        </p>
+}
+
+@code {
+    private IEnumerable<User> Users = new User[0];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.ADMIN))
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        this.Users = await this.BlbApiHandler.GetUsers();
+    }
+
+    public async Task SaveAuthLevel(string username, EAuthorizationLevel authLevel)
+    {
+        await BlbApiHandler.UpdateAuthorizationLevel(username, authLevel);
+        NotificationManager.SetSuccessNotification($"{username} has been given the authorization level {Enum.GetName(typeof(EAuthorizationLevel), authLevel).ToLower()}");
+        this.Users = await this.BlbApiHandler.GetUsers();
+    }
+}

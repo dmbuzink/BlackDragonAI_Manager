@@ -9,7 +9,7 @@ namespace BlackDragonAI_Manager.BlbApi.Models
 
         [Required]
         [StringLength(255, ErrorMessage = "The command name is too long. Should be no longer than 255 characters.")]
-        [RegularExpression("![^ \\n]+", ErrorMessage = "Invalid command name")]
+        [RegularExpression("[^! \\n]+", ErrorMessage = "Invalid command name")]
         public string Command { get; set; }
 
         [Required]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,15 +33,36 @@ namespace BlackDragonAI_Manager.BlbApi
         // Endpoints
         public async Task<AuthOutput> Authenticate()
         {
-            var authResult = await _blbApi.Authenticate(this._user);
+            AuthOutput authResult = null;
+            authResult = await _blbApi.Authenticate(this._user);
+//            catch (ApiException e)
+//            {
+//                var apiError = e.ToBlbApiError();
+//                Console.WriteLine(apiError.Message);
+//            }
+            
             this._jwt = authResult.Token;
             // setup reauth timer
-            this._timer = new Timer(authResult.ExpiresInSeconds * 1000);
-            this._timer.AutoReset = false;
-            this._timer.Elapsed += (sender, args) => Authenticate().RunSynchronously();
-            this._timer.Start();
+//            this._timer = new Timer(authResult.ExpiresInSeconds * 1000);
+//            this._timer.AutoReset = false;
+//            this._timer.Elapsed += (sender, args) => Authenticate().RunSynchronously();
+//            this._timer.Start();
             return authResult;
         }
+
+        public async Task<AuthOutput> Register(User user)
+        {
+            var authResult = await this._blbApi.Register(user);
+            SetupUser(user);
+            this._jwt = authResult.Token;
+            return authResult;
+        }
+
+        public async Task UpdateAuthorizationLevel(string username, EAuthorizationLevel authLevel) =>
+            await (await CheckAuthentication()).AuthUpdate(this._jwt, username, new AuthorizationLevelInput(){AuthorizationLevel = authLevel});
+
+        public async Task<IEnumerable<User>> GetUsers() => 
+            await (await CheckAuthentication()).GetUsers(this._jwt);
 
         public async Task<IEnumerable<CommandDetails>> GetAllCommands() =>
             await (await CheckAuthentication()).GetCommands(this._jwt);
@@ -59,6 +81,18 @@ namespace BlackDragonAI_Manager.BlbApi
 
         public async Task DeleteAlias(string alias) =>
             await(await CheckAuthentication()).DeleteAlias(this._jwt, alias.Substring(1));
+
+        public async Task<IEnumerable<TimedMessage>> GetTimedMessage() =>
+            await (await CheckAuthentication()).GetTimedMessages(this._jwt);
+
+        public async Task<TimedMessage> CreateTimedMessage(string command) =>
+            await (await CheckAuthentication()).CreateTimedMessage(this._jwt, new TimedMessage()
+            {
+                Command = command
+            });
+
+        public async Task DeleteTimedMessage(string command) =>
+            await (await CheckAuthentication()).DeleteTimedMessage(this._jwt, command);
 
         public async Task<IBlbApi> CheckAuthentication()
         {

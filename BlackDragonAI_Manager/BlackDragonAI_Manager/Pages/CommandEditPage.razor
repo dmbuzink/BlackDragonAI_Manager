@@ -1,8 +1,8 @@
 ﻿@page "/commands/{CommandName}"
-@using BlackDragonAI_Manager.BlbApi
-@using BlackDragonAI_Manager.BlbApi.Models
 @inject BlbApiHandler BlbApiHandler
 @inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
+@inject NotificationManager NotificationManager
 
 @if (InEditingMode)
 {
@@ -19,6 +19,15 @@ else
 @*              <p>@Command.Message</p> *@
 @*          </div> *@
 @*      </div> *@
+
+@if (ErrorMessage != null)
+{
+    <ul>
+        <li style="color: red;">
+            <p style="color: red;">@ErrorMessage</p>
+        </li>
+    </ul>
+}
 
 @if (Command != null)
 {
@@ -91,7 +100,15 @@ else
         <EditForm model="@NewAlias" OnValidSubmit="CreateAlias">
             <DataAnnotationsValidator />
             <ValidationSummary />
-
+            @if (AliasErrorMessage != null)
+            {
+                <ul>
+                    <li style="color: red;">
+                        <p style="color: red;">@AliasErrorMessage</p>
+                    </li>
+                </ul>
+            }
+            
             <p>
                 <label>
                     New alias:
@@ -109,20 +126,30 @@ else
     public CommandDetails Command;
     public IEnumerable<string> Aliases;
     public AliasInput NewAlias = new AliasInput();
+    public string ErrorMessage;
+    public string AliasErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
+        if(!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("login");
+            return;
+        }
+
         var allCommands = await this.BlbApiHandler.GetAllCommands();
+        CommandName = $"!{CommandName}";
         var commandFromApi = allCommands.FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
         this.InEditingMode = commandFromApi != null;
         if(InEditingMode)
         {
             Aliases = allCommands.Where(c => c.OriginalCommand.Equals(commandFromApi.OriginalCommand) && !c.Command.Equals(commandFromApi.Command)).Select(c => c.Command);
             Command = commandFromApi;
+            Command.Command = Command.Command.Substring(1);
         }
         else
         {
-            Command = new CommandDetails() { Command = "!" };
+            Command = new CommandDetails();
         }
     }
 
@@ -133,22 +160,44 @@ else
 
     public async Task SaveEdit()
     {
-        if (InEditingMode)
+        try
         {
-            await this.BlbApiHandler.EditCommand(Command);
+            var commandForApi = new CommandDetails()
+            {
+                Command = $"!{Command.Command}",
+                Message = this.Command.Message,
+                Permission = this.Command.Permission,
+                OriginalCommand = this.Command.OriginalCommand,
+                Timer = this.Command.Timer
+            };
+            if (InEditingMode)
+            {
+                await this.BlbApiHandler.EditCommand(commandForApi);
+                NotificationManager.SetSuccessNotification($"The command {Command.Command} successfully modified");
+            }
+            else
+            {
+                await this.BlbApiHandler.CreateCommand(commandForApi);
+                NotificationManager.SetSuccessNotification($"The command {Command.Command} successfully created");
+                NavigationManager.NavigateTo($"commands/{Command.Command}");
+                await this.OnInitializedAsync();
+            }
+
+            //            NavigationManager.NavigateTo("commands");
         }
-        else
+        catch(ApiException e)
         {
-            await this.BlbApiHandler.CreateCommand(Command);
+            var apiError = e.ToBlbApiError();
+            this.ErrorMessage = apiError.Message;
         }
-        NavigationManager.NavigateTo("commands");
     }
 
     public async Task Delete()
     {
         if(InEditingMode)
         {
-            await this.BlbApiHandler.DeleteCommand(this.Command.Command);
+            await this.BlbApiHandler.DeleteCommand($"!{this.Command.Command}");
+            NotificationManager.SetSuccessNotification($"The command {this.Command.Command} has been successfully deleted");
             NavigationManager.NavigateTo("commands");
         }
     }
@@ -157,10 +206,18 @@ else
     {
         if(InEditingMode)
         {
-            NewAlias.Alias = $"!{NewAlias.Alias}";
-            await this.BlbApiHandler.AddAlias(this.Command.OriginalCommand, NewAlias.Alias);
-            this.Aliases = Aliases.Append(NewAlias.Alias);
-            this.NewAlias = new AliasInput();
+            try
+            {
+                await this.BlbApiHandler.AddAlias(this.Command.OriginalCommand, $"!{NewAlias.Alias}");
+                NotificationManager.SetSuccessNotification($"The alias {this.NewAlias.Alias} has been successfully created");
+                this.Aliases = Aliases.Append("!" + NewAlias.Alias);
+                this.NewAlias = new AliasInput();
+            }
+            catch (ApiException e)
+            {
+                var apiError = e.ToBlbApiError();
+                this.AliasErrorMessage = apiError.Message;
+            }
         }
     }
 
@@ -169,6 +226,7 @@ else
         if(InEditingMode)
         {
             await this.BlbApiHandler.DeleteAlias(alias);
+            NotificationManager.SetSuccessNotification($"The alias {this.NewAlias.Alias} has been successfully deleted");
             this.Aliases = this.Aliases.Where(a => !a.Equals(alias));
         }
     }

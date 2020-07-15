@@ -1,19 +1,27 @@
 ﻿@page "/commands"
-@using BlackDragonAI_Manager.BlbApi
-@using BlackDragonAI_Manager.BlbApi.Models
+@page "/"
 @inject BlbApiHandler BlbApiHandler
 @inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
 
 <h1>Commands</h1>
+
+<div>
+    <label>
+        <input type="text" @bind-value="@_searchString"/>
+    </label>
+    <button @onclick="SearchHandler">Search</button>
+</div>
+<br/>
 
 <div>
     @if (_distinctCommands != null)
     {
         @foreach (var command in _distinctCommands)
         {
-            <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand)" style="cursor: pointer !important">
+            <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand.Substring(1))" style="cursor: pointer !important">
                 <div class="card-body card-space">
-                    <h5 class="card-title">@command.OriginalCommand</h5>
+                    <h5 class="card-title">@command.OriginalCommand.Substring(1)</h5>
                     <p>@command.Message</p>
                 </div>
             </div>
@@ -27,11 +35,35 @@
     private readonly string _newCommandString = "new";
     private IEnumerable<CommandDetails> _commands;
     private IEnumerable<CommandDetails> _distinctCommands;
+    private string _searchString = string.Empty;
+    private string _previousSearchString = string.Empty;
+    private Timer _timer;
 
     protected override async Task OnInitializedAsync()
     {
+        if (!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("login");
+            return;
+        }
+
+        Console.WriteLine("loading commands");
         this._commands = await this.BlbApiHandler.GetAllCommands();
         this._distinctCommands = this._commands.Where(c => c.Command.Equals(c.OriginalCommand));
+
+        this._timer = new Timer(500)
+        {
+            AutoReset = true
+        };
+        this._timer.Elapsed += (sender, args) =>
+        {
+            if (!_previousSearchString.Equals(_searchString))
+            {
+                _previousSearchString = _searchString;
+                SearchHandler();
+            }
+        };
+        this._timer.Start();
     }
 
     public void GoToCommandEditPage(string commandName)
@@ -39,4 +71,8 @@
         this.NavigationManager.NavigateTo($"commands/{commandName}");
     }
 
+    public void SearchHandler()
+    {
+        this._distinctCommands = this._commands.Where(c => c.Command.Contains(_searchString.ToLower())).GroupBy(c => c.OriginalCommand).Select(c => c.First());
+    }
 }

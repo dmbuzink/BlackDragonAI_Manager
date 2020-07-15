@@ -1,4 +1,8 @@
-﻿<div class="top-row pl-4 navbar navbar-dark">
+﻿@using BlackDragonAI_Manager.BlbApi.Models
+@inject ILocalStorageService LocalStorageService
+@inject LoggedInStatusManager LoggedInStatusManager
+
+<div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand" href="">BlackDragonAI_Manager</a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
         <span class="navbar-toggler-icon"></span>
@@ -9,22 +13,70 @@
     <ul class="nav flex-column">
         <li class="nav-item px-3">
             <NavLink class="nav-link" href="login">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Login
+                <span class="oi oi-list-rich" aria-hidden="true"></span> Log @LogStatusString
             </NavLink>
         </li>
 
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="commands">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Commands
-            </NavLink>
-        </li>
+        @if (_isAlreadyLoggedIn)
+        {
+            @if (_authorizationLevel >= EAuthorizationLevel.MODERATOR)
+            {
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="commands">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Commands
+                    </NavLink>
+                </li>
+
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="timedmessages">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Timed messages
+                    </NavLink>
+                </li>
+            }
+
+            @if (_authorizationLevel >= EAuthorizationLevel.ADMIN)
+            {
+                <li class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin">
+                        <span class="oi oi-list-rich" aria-hidden="true"></span> Admin
+                    </NavLink>
+                </li>
+            }
+        }
     </ul>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private bool _isAlreadyLoggedIn;
+    private string LogStatusString;
+    private EAuthorizationLevel _authorizationLevel;
 
     private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isAlreadyLoggedIn = await LocalStorageService.IsLoggedIn();
+        LogStatusString = _isAlreadyLoggedIn ? "out" : "in";
+        HandleAuthenticationStatusAsync(_isAlreadyLoggedIn);
+        LoggedInStatusManager.UserLoggedIn += HandleAuthenticationStatusAsync;
+    }
+
+    private async void HandleAuthenticationStatusAsync(bool loggedIn)
+    {
+        _isAlreadyLoggedIn = loggedIn;
+        LogStatusString = loggedIn ? "out" : "in";
+        if (loggedIn)
+        {
+            _authorizationLevel = await LocalStorageService.GetAuthorizationLevel();
+        }
+        else
+        {
+            _authorizationLevel = EAuthorizationLevel.NONE;
+        }
+
+        this.StateHasChanged();
+    }
 
     private void ToggleNavMenu()
     {

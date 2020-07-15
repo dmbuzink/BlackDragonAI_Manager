@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject ILocalStorageService LocalStorageService
+@inject LoggedInStatusManager LoggedInStatusManager
+@inject NavigationManager NavigationManager
 
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 <link href="css/main.min.css" rel="stylesheet">
@@ -8,11 +11,26 @@
 </div>
 
 <div class="main">
-@*     <div class="top-row px-4" id="header"> *@
-@*         <a href="http://blazor.net" target="_blank" class="ml-md-auto">About</a> *@
-@*     </div> *@
+    @*     <div class="top-row px-4" id="header"> *@
+    @*         <a href="http://blazor.net" target="_blank" class="ml-md-auto">About</a> *@
+    @*     </div> *@
 
-     <div class="content px-4">
-         @Body
-     </div>
+    <div class="content px-4">
+        @Body
+    </div>
 </div>
+
+<Notification />
+
+
+
+@code
+{
+    protected override async Task OnInitializedAsync()
+    {
+        var userAlreadyLoggedIn = await LocalStorageService.IsLoggedIn();
+        LoggedInStatusManager.SetLoggedInStatus(userAlreadyLoggedIn);
+        NavigationManager.NavigateTo("/");
+    }
+
+}
