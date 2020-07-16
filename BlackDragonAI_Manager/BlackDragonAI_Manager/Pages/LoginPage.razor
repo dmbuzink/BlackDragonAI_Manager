@@ -87,8 +87,6 @@
                 result = await BlbApiHandler.Register(_user);
                 NotificationManager.SetSuccessNotification($"Welcome to the website {_user.Username}!");
             }
-            Console.WriteLine("Successfully logged in");
-            Console.WriteLine($"Token: {result.Token}");
             this._user.AuthorizationLevel = result.AuthorizationLevel;
             await LocalStorageService.SetItemAsync<User>("user", this._user);
             LoggedInStatusManager.SetLoggedInStatus(true);
@@ -104,7 +102,6 @@
         {
             this.ErrorMessage = "Invalid user";
         }
-
     }
 
     public async Task LogOut()

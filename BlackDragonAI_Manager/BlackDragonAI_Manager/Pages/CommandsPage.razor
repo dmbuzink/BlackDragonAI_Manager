@@ -8,9 +8,13 @@
 
 <div>
     <label>
-        <input type="text" @bind-value="@_searchString"/>
+        <input type="text" @bind-value="@_searchString" />
     </label>
     <button @onclick="SearchHandler">Search</button>
+    @if (!string.IsNullOrEmpty(_searchString))
+    {
+        <button @onclick="ClearSearch">Clear</button>
+    }
 </div>
 <br/>
 
@@ -74,5 +78,12 @@
     public void SearchHandler()
     {
         this._distinctCommands = this._commands.Where(c => c.Command.Contains(_searchString.ToLower())).GroupBy(c => c.OriginalCommand).Select(c => c.First());
+    }
+
+    public void ClearSearch()
+    {
+        _previousSearchString = string.Empty;
+        _searchString = string.Empty;
+        this.StateHasChanged();
     }
 }
