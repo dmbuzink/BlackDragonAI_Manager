@@ -2,7 +2,7 @@
 
 @if (_shouldShowSuccessNotification)
 {
-    <div class="card bg-success text-white" style="position: fixed; z-index: 1; top: 0; right: 0; margin-right: 15px; margin-top: 15px" @onclick="() => ManageSuccessNotification(false)">
+    <div class="card bg-success text-white" style="position: fixed; z-index: 1; top: 0; right: 0; margin-right: 15px; margin-top: 15px; cursor: pointer" @onclick="() => ManageSuccessNotification(false, _notificationMessage)">
         <div class="card-body">@_notificationMessage</div>
     </div>
 }
@@ -17,7 +17,7 @@
         NotificationManager.SuccessMessageNeedsToBeHidden += (message) => ManageSuccessNotification(false, message);
     }
 
-    private void ManageSuccessNotification(bool shouldShow, string message = null)
+    private void ManageSuccessNotification(bool shouldShow, string message)
     {
         if(shouldShow)
         {
