@@ -43,10 +43,43 @@ namespace BlackDragonAI_Manager.BlbApi
         [Post("/timedmessages")]
         Task<TimedMessage> CreateTimedMessage([Header("X-Access-Token")] string authToken, [Body] TimedMessage timedMessage);
 
+        [Post("/timedmessages/{commandName}")]
+        Task<TimedMessage> UpdateTimedMessage([Header("X-Access-Token")] string authToken, [Body] TimedMessage timedMessage, string commandName);
+
         [Get("/timedmessages")]
         Task<IEnumerable<TimedMessage>> GetTimedMessages([Header("X-Access-Token")] string authToken);
 
         [Delete("/timedmessages/{commandName}")]
         Task DeleteTimedMessage([Header("X-Access-Token")] string authToken, string commandName);
+
+        [Put("/timedmessages/{commandName}")]
+        Task<TimedMessage> EditTimedMessage([Header("X-Access-Token")] string authToken, string commandName,
+            TimedMessage timedMessage);
+
+        [Post("/streamplannings")]
+        Task<StreamPlanning> CreateStreamPlanning([Header("X-Access-Token")] string authToken,
+            [Body] StreamPlanning streamPlanning);
+
+        [Put("/streamplannings/{id}")]
+        Task<StreamPlanning> UpdateStreamPlanning([Header("X-Access-Token")] string authToken, long id,
+            [Body] StreamPlanning streamPlanning);
+
+        [Get("/streamplannings")]
+        Task<IEnumerable<StreamPlanning>> GetStreamPlannings([Header("X-Access-Token")] string authToken);
+
+        [Get("/streamplannings/{id}")]
+        Task<StreamPlanning> GetStreamPlanningById([Header("X-Access-Token")] string authToken, long id);
+
+        [Delete("/streamplannings/{id}")]
+        Task DeleteStreamPlanning([Header("X-Access-Token")] string authToken, long id);
+
+        [Put("/streamplannings/discord/update")]
+        Task UpdateDiscordStreamPlannings([Header("X-Access-Token")] string authToken);
+
+        [Put("/streamplannings/discord/load")]
+        Task LoadDiscordStreamPlannings([Header("X-Access-Token")] string authToken);
+
+        [Post("/reconnect")]
+        Task Reconnect([Header("X-Access-Token")] string authToken);
     }
 }

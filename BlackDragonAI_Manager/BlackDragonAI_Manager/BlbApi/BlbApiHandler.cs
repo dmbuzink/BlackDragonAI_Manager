@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
@@ -85,14 +86,80 @@ namespace BlackDragonAI_Manager.BlbApi
         public async Task<IEnumerable<TimedMessage>> GetTimedMessage() =>
             await (await CheckAuthentication()).GetTimedMessages(this._jwt);
 
-        public async Task<TimedMessage> CreateTimedMessage(string command) =>
-            await (await CheckAuthentication()).CreateTimedMessage(this._jwt, new TimedMessage()
-            {
-                Command = command
-            });
+        public async Task<TimedMessage> CreateTimedMessage(TimedMessage timedMessage) =>
+            await (await CheckAuthentication()).CreateTimedMessage(this._jwt, timedMessage);
+
+        public async Task<TimedMessage> UpdateTimedMessage(TimedMessage timedMessage) =>
+            await (await CheckAuthentication()).UpdateTimedMessage(this._jwt, timedMessage, timedMessage.Command);
 
         public async Task DeleteTimedMessage(string command) =>
             await (await CheckAuthentication()).DeleteTimedMessage(this._jwt, command);
+
+        public async Task EditTimedMessage(TimedMessage timedMessage) =>
+            await (await CheckAuthentication()).EditTimedMessage(this._jwt, timedMessage.Command.Substring(1), timedMessage);
+
+        public async Task Reconnect() =>
+            await (await CheckAuthentication()).Reconnect(this._jwt);
+
+        public async Task<StreamPlanning> CreateStreamPlanning(StreamPlanning streamPlanning) =>
+            await (await CheckAuthentication()).CreateStreamPlanning(this._jwt, streamPlanning);
+
+        public async Task<StreamPlanning> UpdateStreamPlanning(StreamPlanning streamPlanning) =>
+            await (await CheckAuthentication()).UpdateStreamPlanning(this._jwt, streamPlanning.Id, streamPlanning);
+
+        // public async Task<IEnumerable<StreamPlanning>> GetStreamPlannings() =>
+            // await (await CheckAuthentication()).GetStreamPlannings(this._jwt);
+
+        // Temp for testing
+        public async Task<IEnumerable<StreamPlanning>> GetStreamPlannings()
+        {
+            var sp1 = new StreamPlanning()
+            {
+                Id = 1,
+                Date = new DateTime(2021,10, 26),
+                TimeSlot = "Avond",
+                Game = "Marvel’s Guardians of the Galaxy",
+                StreamType = "Showcase of Let's Play",
+                GameType = "Action Adventure / Story",
+                TrailerUri = "https://youtu.be/QBn8ST8rELc"
+            };
+            var sp2 = new StreamPlanning()
+            {
+                Id = 2,
+                Date = new DateTime(2021, 11, 5),
+                TimeSlot = "Nacht, Middag & Avond",
+                Game = "Forza Horizon 5",
+                StreamType = "Racen met Daryll en Damian",
+                GameType = "Racing / Open World",
+                TrailerUri = "https://youtu.be/FYH9n37B7Yw"
+            };
+            var sp3 = new StreamPlanning()
+            {
+                Id = 3,
+                Date = new DateTime(2021, 12, 7),
+                TimeSlot = "Nacht & Avond",
+                Game = "Dying Light 2",
+                StreamType = "Showcase of Let's Play",
+                GameType = "Zombie / Open World",
+                TrailerUri = "https://youtu.be/UwJAAy7tPhE"
+            };
+            return new[]
+            {
+                sp1, sp2, sp3
+            };
+        }
+            
+        public async Task<StreamPlanning> GetStreamPlanningById(long id) =>
+            await (await CheckAuthentication()).GetStreamPlanningById(this._jwt, id);
+
+        public async Task DeleteStreamPlanning(long id) =>
+            await (await CheckAuthentication()).DeleteStreamPlanning(this._jwt, id);
+
+        public async Task UpdateDiscordStreamPlannings() =>
+            await (await CheckAuthentication()).UpdateDiscordStreamPlannings(this._jwt);
+
+        public async Task LoadDiscordStreamPlannings() =>
+            await (await CheckAuthentication()).LoadDiscordStreamPlannings(this._jwt);
 
         public async Task<IBlbApi> CheckAuthentication()
         {
