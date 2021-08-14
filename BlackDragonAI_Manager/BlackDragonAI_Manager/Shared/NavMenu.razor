@@ -1,6 +1,7 @@
 ﻿@using BlackDragonAI_Manager.BlbApi.Models
 @inject ILocalStorageService LocalStorageService
 @inject LoggedInStatusManager LoggedInStatusManager
+@inject BlbApiHandler BlbApiHandler
 
 <div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand" href="">BlackDragonAI_Manager</a>
@@ -50,6 +51,15 @@
             </NavLink>
         </li>
     </ul>
+
+    @if(_isAlreadyLoggedIn && _authorizationLevel >= EAuthorizationLevel.ADMIN)
+    {
+        <div style="width: 100%; margin-bottom: 30px; bottom: 0px; position: absolute">
+            <button class="nav-item px-3" @onclick="ReconnectBot" style="width: 50%; margin: auto; display: block;">
+                Reconnect bot
+            </button>
+        </div>
+    }
 </div>
 
 @code {
@@ -66,6 +76,8 @@
         LogStatusString = _isAlreadyLoggedIn ? "out" : "in";
         HandleAuthenticationStatusAsync(_isAlreadyLoggedIn);
         LoggedInStatusManager.UserLoggedIn += HandleAuthenticationStatusAsync;
+        this._isAlreadyLoggedIn = true;
+        this._authorizationLevel = EAuthorizationLevel.ADMIN;
     }
 
     private async void HandleAuthenticationStatusAsync(bool loggedIn)
@@ -87,5 +99,11 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async void ReconnectBot()
+    {
+        await this.BlbApiHandler.Reconnect();
+        Console.WriteLine("Sending request to reconnect bot");
     }
 }

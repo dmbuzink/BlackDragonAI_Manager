@@ -1,4 +1,4 @@
-﻿@page "/timedmessages" 
+﻿@page "/timedmessages"
 @inject BlbApiHandler BlbApiHandler
 @inject ILocalStorageService LocalStorageService
 @inject NavigationManager NavigationManager
@@ -6,47 +6,87 @@
 
 <h3>Timed messages</h3>
 <ul>
+    @if (_modificationErrorMessage != null)
+    {
+        <ul>
+            <li style="color: red;">
+                <p style="color: red;">@_modificationErrorMessage</p>
+            </li>
+        </ul>
+    }
     @foreach (var tm in _timedMessages)
     {
-        <li style="color: white;">
-            <p>
-                @tm.Command.Substring(1)
-                <button style="background-color: red;" @onclick="() => DeleteTimedMessage(tm.Command)">Remove</button>
-            </p>
-        </li>
-    }
-</ul>
-<EditForm model="@_newTimedMessage" OnValidSubmit="() => CreateTimedMessage(_newTimedMessage.Command)">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
-     @if (_errorMessage != null)
-     {
-         <ul>
-             <li style="color: red;">
-                 <p style="color: red;">@_errorMessage</p>
-             </li>
-         </ul>
-     }
+        //        Edit timed command stuff with validation and save button and stuffies
+        @*         <li style="color: white;"> *@
+        @*             <p> *@
+        @*                 @tm.Command.Substring(1) *@
+        @*                 <input type="number" value="@tm.IntervalInMinutes" > *@
+        @*                 <button style="background-color: red;" @onclick="() => DeleteTimedMessage(tm.Command)">Remove</button> *@
+        @*             </p> *@
+        @*         </li> *@
 
-    <p>
-        <label>
-            New timed message for:
-            <InputSelect @bind-Value="_newTimedMessage.Command">
-                @foreach(var command in _commandsToMakeTimedMessageFor)
-                {
-                    <option value="@command">@command</option>
-                }
-            </InputSelect>
-            <button type="submit">Add</button>
-        </label>
-    </p>
-</EditForm>
+        <li style="color: white;">
+            <EditForm model="@tm" OnValidSubmit="() => SaveTimedMessage(tm)">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <p>
+                    @tm.Command.Substring(1)
+                    Interval: <InputNumber @bind-Value="@tm.IntervalInMinutes" />
+                    Offset: <InputNumber @bind-Value="@tm.OffsetInMinutes" />
+                    
+                    <button type="submit">Save</button>
+                    <button style="background-color: red;" type="button" @onclick="() => DeleteTimedMessage(tm.Command)">Remove</button>
+                </p>    
+            </EditForm>
+            </li>
+    }
+    </ul>
+<div>
+    <EditForm model="@_newTimedMessage" OnValidSubmit="() => CreateTimedMessage(_newTimedMessage)">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        @if (_errorMessage != null)
+        {
+            <ul>
+                <li style="color: red;">
+                    <p style="color: red;">@_errorMessage</p>
+                </li>
+            </ul>
+        }
+
+        <br/>
+
+        <h3>New timed message for:</h3>
+        <p>
+            <label>
+                Commands: <InputSelect @bind-Value="_newTimedMessage.Command">
+                    @foreach (var command in _commandsToMakeTimedMessageFor)
+                    {
+                        <option value="@command">@command</option>
+                    }
+                </InputSelect>
+            </label>
+        </p>
+        <p>
+            <label>
+                Interval: <InputNumber @bind-Value="_newTimedMessage.IntervalInMinutes" />
+            </label>
+        </p>
+        <p>
+            <label>
+                Offset: <InputNumber @bind-Value="_newTimedMessage.OffsetInMinutes" />
+            </label>
+        </p>
+        <button type="submit">Add</button>
+    </EditForm>
+</div>
 
 @code {
     private IEnumerable<TimedMessage> _timedMessages = new TimedMessage[0];
     private TimedMessage _newTimedMessage = new TimedMessage();
     private IEnumerable<string> _commandsToMakeTimedMessageFor = new string[0];
     private string _errorMessage;
+    private string _modificationErrorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,23 +109,58 @@
 
     private async Task DeleteTimedMessage(string command)
     {
-        await this.BlbApiHandler.DeleteTimedMessage(command);
-        NotificationManager.SetSuccessNotification($"The timed message for the command {command} has been successfully deleted");
-        await Setup();
+        try
+        {
+            await this.BlbApiHandler.DeleteTimedMessage(command);
+            NotificationManager.SetSuccessNotification($"The timed message for the command {command} has been successfully deleted");
+            await Setup();
+        }
+        catch(ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            _errorMessage = apiError.Message;
+        }
     }
 
-    private async Task CreateTimedMessage(string command)
+    private async Task CreateTimedMessage(TimedMessage timedMessage)
     {
         try
         {
-            await this.BlbApiHandler.CreateTimedMessage($"!{command}");
-            NotificationManager.SetSuccessNotification($"The timed message for the command {command} has been successfully created");
+            var newTimedMessage = new TimedMessage(){
+                Command = $"!{timedMessage.Command}",
+                IntervalInMinutes = timedMessage.IntervalInMinutes,
+                OffsetInMinutes = timedMessage.OffsetInMinutes
+            };
+            await this.BlbApiHandler.CreateTimedMessage(newTimedMessage);
+            _errorMessage = null;
+            NotificationManager.SetSuccessNotification($"The timed message for the command {newTimedMessage.Command.Substring(1)} has been successfully created");
             await Setup();
         }
         catch (ApiException e)
         {
             var apiError = e.ToBlbApiError();
             _errorMessage = apiError.Message;
+        }
+    }
+
+    private async Task SaveTimedMessage(TimedMessage timedMessage)
+    {
+        try
+        {
+            var editedTimedMessage = new TimedMessage(){
+                Command = $"!{timedMessage.Command}",
+                IntervalInMinutes = timedMessage.IntervalInMinutes,
+                OffsetInMinutes = timedMessage.OffsetInMinutes
+            };
+            await this.BlbApiHandler.EditTimedMessage(editedTimedMessage);
+            _errorMessage = null;
+            NotificationManager.SetSuccessNotification($"The timed message for the command {editedTimedMessage.Command.Substring(1)} has been successfully modified");
+            await Setup();
+        }
+        catch (ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            _modificationErrorMessage = apiError.Message;
         }
     }
 }

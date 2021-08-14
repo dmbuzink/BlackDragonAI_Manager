@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Text;
 using BlackDragonAI_Manager.BlbApi;
@@ -34,9 +35,7 @@ namespace BlackDragonAI_Manager
 
             builder.Services.AddTransient(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddRefitClient<IBlbApi>(refitSettings).ConfigureHttpClient(httpClient =>
-//                httpClient.BaseAddress = new Uri("https://blb-api.herokuapp.com/api"));
-//                httpClient.BaseAddress = new Uri("https://blackdragonai-api.herokuapp.com/"));
-                httpClient.BaseAddress = new Uri("https://localhost:44334/api"));
+                httpClient.BaseAddress = new Uri("http://blackdragonai.nl/api"));
 
             builder.Services.AddSingleton<NotificationManager>();
             builder.Services.AddSingleton<BlbApiHandler>();
