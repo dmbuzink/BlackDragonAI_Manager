@@ -1,0 +1,89 @@
+﻿@page "/commands"
+@page "/"
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
+
+<h1>Commands</h1>
+
+<div>
+    <label>
+        <input type="text" @bind-value="@_searchString" />
+    </label>
+    <button @onclick="SearchHandler">Search</button>
+    @if (!string.IsNullOrEmpty(_searchString))
+    {
+        <button @onclick="ClearSearch">Clear</button>
+    }
+</div>
+<br/>
+
+<div>
+    @if (_distinctCommands != null)
+    {
+        @foreach (var command in _distinctCommands)
+        {
+            <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand.Substring(1))" style="cursor: pointer !important">
+                <div class="card-body card-space">
+                    <h5 class="card-title">@command.OriginalCommand.Substring(1)</h5>
+                    <p>@command.Message</p>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<img src="images/PlusIcon.png" @onclick="() => GoToCommandEditPage(_newCommandString)" style="position: fixed; z-index: 1; bottom: 0; right: 0; width: 215px; height: 215px; margin-right: 30px; margin-bottom: 30px; cursor: pointer">
+
+@code {
+    private readonly string _newCommandString = "new";
+    private IEnumerable<CommandDetails> _commands;
+    private IEnumerable<CommandDetails> _distinctCommands;
+    private string _searchString = string.Empty;
+    private string _previousSearchString = string.Empty;
+    private Timer _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("login");
+            return;
+        }
+
+        Console.WriteLine("loading commands");
+        this._commands = await this.BlbApiHandler.GetAllCommands();
+        this._distinctCommands = this._commands.Where(c => c.Command.Equals(c.OriginalCommand));
+
+        this._timer = new Timer(500)
+        {
+            AutoReset = true
+        };
+        this._timer.Elapsed += (sender, args) =>
+        {
+            if (!_previousSearchString.Equals(_searchString))
+            {
+                _previousSearchString = _searchString;
+                SearchHandler();
+            }
+        };
+        this._timer.Start();
+    }
+
+    public void GoToCommandEditPage(string commandName)
+    {
+        this.NavigationManager.NavigateTo($"commands/{commandName}");
+    }
+
+    public void SearchHandler()
+    {
+        this._distinctCommands = this._commands.Where(c => c.Command.Contains(_searchString.ToLower())).GroupBy(c => c.OriginalCommand).Select(c => c.First());
+    }
+
+    public void ClearSearch()
+    {
+        _previousSearchString = string.Empty;
+        _searchString = string.Empty;
+        this.StateHasChanged();
+    }
+}

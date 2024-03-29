@@ -1,0 +1,36 @@
+﻿@inject NotificationManager NotificationManager
+
+@if (_shouldShowSuccessNotification)
+{
+    <div class="card bg-success text-white" style="position: fixed; z-index: 1; top: 0; right: 0; margin-right: 15px; margin-top: 15px; cursor: pointer" @onclick="() => ManageSuccessNotification(false, _notificationMessage)">
+        <div class="card-body">@_notificationMessage</div>
+    </div>
+}
+
+@code {
+    private string _notificationMessage;
+    private bool _shouldShowSuccessNotification;
+
+    protected override void OnInitialized()
+    {
+        NotificationManager.SuccessMessageNeedsToBeShown += (message) => ManageSuccessNotification(true, message);
+        NotificationManager.SuccessMessageNeedsToBeHidden += (message) => ManageSuccessNotification(false, message);
+    }
+
+    private void ManageSuccessNotification(bool shouldShow, string message)
+    {
+        if(shouldShow)
+        {
+            _notificationMessage = message;
+            _shouldShowSuccessNotification = true;
+        }
+        else
+        {
+            if (!_notificationMessage.Equals(message))
+                return;
+            _shouldShowSuccessNotification = false;
+            _notificationMessage = string.Empty;
+        }
+        this.StateHasChanged();
+    }
+}

@@ -1,0 +1,233 @@
+﻿@page "/commands/{CommandName}"
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
+@inject NotificationManager NotificationManager
+
+@if (InEditingMode)
+{
+    <h3>Edit Command</h3>
+}
+else
+{
+    <h3>Create Command</h3>
+}
+
+@* <div class="card text-white" @onclick="() => GoToCommandEditPage(command.OriginalCommand)" style="cursor: pointer !important"> *@
+@*          <div class="card-body card-space"> *@
+@*              <h5 class="card-title">@Command.OriginalCommand</h5> *@
+@*              <p>@Command.Message</p> *@
+@*          </div> *@
+@*      </div> *@
+
+@if (ErrorMessage != null)
+{
+    <ul>
+        <li style="color: red;">
+            <p style="color: red;">@ErrorMessage</p>
+        </li>
+    </ul>
+}
+
+@if (Command != null)
+{
+    <EditForm model="@Command" OnValidSubmit="SaveEdit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <p>
+            <label>
+                Command name:
+                @if (InEditingMode)
+                {
+                    @Command.Command
+                }
+                else
+                {
+                    <InputText @bind-Value="Command.Command"></InputText>
+                }
+            </label>
+        </p>
+        <p>
+            <label style="text-align: center; position: relative; top: -40px;">
+                Message:
+            </label>
+
+            <InputTextArea style="width: 400px; height: 80px;" @bind-Value="Command.Message" />
+        </p>
+        <p>
+            <label>
+                Permission:
+                <InputSelect @bind-Value="Command.Permission">
+                    <option value="@EPermission.EVERYONE">Everyone</option>
+                    <option value="@EPermission.SUBS">Subs</option>
+                    <option value="@EPermission.MODS">Moderators</option>
+                    <option value="@EPermission.ADMIN">Admins</option>
+                </InputSelect>
+            </label>
+        </p>
+        <p>
+            <label>
+                Cooldown timer:
+                <InputNumber @bind-Value="Command.Timer" />
+            </label>
+        </p>
+        @if (InEditingMode)
+        {
+            <button type="submit" style="font-size: 22px;">Save</button>
+        }
+        else
+        {
+            <button type="submit" style="font-size: 22px;">Create</button>
+        }
+    </EditForm>
+
+    @if (InEditingMode)
+    {
+        <button @onclick="Delete" style="font-size: 22px; background-color: red; position: fixed; right: 25px; top: 25px; height: 50px; width: 150px;">Delete</button>
+
+        <h3 style="margin-top: 30px;">Aliases</h3>
+        <ul>
+            @foreach (var alias in Aliases)
+            {
+                <li style="color: white;">
+                    <p>
+                        @alias.Substring(1)
+                        <button style="background-color: red;" @onclick="() => DeleteAlias(alias)">Remove</button>
+                    </p>
+                </li>
+            }
+        </ul>
+        <EditForm model="@NewAlias" OnValidSubmit="CreateAlias">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            @if (AliasErrorMessage != null)
+            {
+                <ul>
+                    <li style="color: red;">
+                        <p style="color: red;">@AliasErrorMessage</p>
+                    </li>
+                </ul>
+            }
+            
+            <p>
+                <label>
+                    New alias:
+                    <InputText @bind-Value="NewAlias.Alias" />
+                    <button type="submit">Add</button>
+                </label>
+            </p>
+        </EditForm>
+    }
+}
+
+@code {
+    [Parameter] public string CommandName { get; set; }
+    public bool InEditingMode;
+    public CommandDetails Command;
+    public IEnumerable<string> Aliases;
+    public AliasInput NewAlias = new AliasInput();
+    public string ErrorMessage;
+    public string AliasErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if(!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("login");
+            return;
+        }
+
+        var allCommands = await this.BlbApiHandler.GetAllCommands();
+        CommandName = $"!{CommandName}";
+        var commandFromApi = allCommands.FirstOrDefault(c => c.Command.Equals(CommandName.ToLower()));
+        this.InEditingMode = commandFromApi != null;
+        if(InEditingMode)
+        {
+            Aliases = allCommands.Where(c => c.OriginalCommand.Equals(commandFromApi.OriginalCommand) && !c.Command.Equals(commandFromApi.Command)).Select(c => c.Command);
+            Command = commandFromApi;
+            Command.Command = Command.Command.Substring(1);
+        }
+        else
+        {
+            Command = new CommandDetails();
+        }
+    }
+
+    private async Task<IEnumerable<string>> GetAliases() =>
+        (await this.BlbApiHandler.GetAllCommands())
+            .Where(c => c.OriginalCommand.Equals(this.Command.OriginalCommand) && !c.Command.Equals(this.Command.Command))
+            .Select(c => c.Command);
+
+    public async Task SaveEdit()
+    {
+        try
+        {
+            var commandForApi = new CommandDetails()
+            {
+                Command = $"!{Command.Command}",
+                Message = this.Command.Message,
+                Permission = this.Command.Permission,
+                OriginalCommand = this.Command.OriginalCommand,
+                Timer = this.Command.Timer
+            };
+            if (InEditingMode)
+            {
+                await this.BlbApiHandler.EditCommand(commandForApi);
+                NotificationManager.SetSuccessNotification($"The command {Command.Command} successfully modified");
+            }
+            else
+            {
+                await this.BlbApiHandler.CreateCommand(commandForApi);
+                NotificationManager.SetSuccessNotification($"The command {Command.Command} successfully created");
+                NavigationManager.NavigateTo($"commands/{Command.Command}");
+                await this.OnInitializedAsync();
+            }
+
+            //            NavigationManager.NavigateTo("commands");
+        }
+        catch(ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            this.ErrorMessage = apiError.Message;
+        }
+    }
+
+    public async Task Delete()
+    {
+        if(InEditingMode)
+        {
+            await this.BlbApiHandler.DeleteCommand($"!{this.Command.Command}");
+            NotificationManager.SetSuccessNotification($"The command {this.Command.Command} has been successfully deleted");
+            NavigationManager.NavigateTo("commands");
+        }
+    }
+
+    public async Task CreateAlias()
+    {
+        if(InEditingMode)
+        {
+            try
+            {
+                await this.BlbApiHandler.AddAlias(this.Command.OriginalCommand, $"!{NewAlias.Alias}");
+                NotificationManager.SetSuccessNotification($"The alias {this.NewAlias.Alias} has been successfully created");
+                this.Aliases = Aliases.Append("!" + NewAlias.Alias);
+                this.NewAlias = new AliasInput();
+            }
+            catch (ApiException e)
+            {
+                var apiError = e.ToBlbApiError();
+                this.AliasErrorMessage = apiError.Message;
+            }
+        }
+    }
+
+    public async Task DeleteAlias(string alias)
+    {
+        if(InEditingMode)
+        {
+            await this.BlbApiHandler.DeleteAlias(alias);
+            NotificationManager.SetSuccessNotification($"The alias {this.NewAlias.Alias} has been successfully deleted");
+            this.Aliases = this.Aliases.Where(a => !a.Equals(alias));
+        }
+    }
+}

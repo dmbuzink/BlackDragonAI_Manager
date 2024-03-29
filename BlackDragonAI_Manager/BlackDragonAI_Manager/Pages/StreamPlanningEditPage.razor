@@ -1,0 +1,168 @@
+﻿@page "/streams/{streamPlanningIdRaw}"
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
+@inject NotificationManager NotificationManager
+
+@if (isNew)
+{
+    <h3>Create stream planning</h3>
+}
+else
+{
+    <h3>Edit stream planning</h3>
+}
+
+<div style="position: absolute; right: 15px; top: 15px; width: fit-content;">
+        <button @onclick="Delete" style="min-width: 70px; min-height: 40px; color: red;">Delete</button>
+    </div>
+
+@if (errorMessage != null)
+{
+    <ul>
+        <li style="color: red;">
+            <p style="color: red;">@errorMessage</p>
+        </li>
+    </ul>
+}
+
+@if (streamPlanning != null)
+{
+    <EditForm model="@streamPlanning" OnValidSubmit="Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="col-lg-12" style="justify-content: flex-start; flex-flow: row wrap; display: flex;">
+            @* Time diff *@
+            <p class="col-lg-4">
+                <label style="margin-right: 10px;">
+                    Time slot:
+                </label>
+            
+                <RadzenDatePicker Style="width: 400px;" DateFormat="dd-MM" @bind-Value="streamPlanning.Date"></RadzenDatePicker >
+            </p>
+            
+            <p class="col-lg-4" style="width: fit-content; display: flex;"> 
+                <label style="margin-right: 10px;">
+                    Time slot: 
+                </label>
+            
+                <InputText style="width: 400px;" @bind-Value="streamPlanning.TimeSlot" />
+            </p>
+            
+            <p class="col-lg-4" style="width: fit-content; display: flex;">
+                <label style="margin-right: 10px;">
+                    Stream type: 
+                </label>
+                        
+                <InputText style="width: 400px;" @bind-Value="streamPlanning.StreamType" />
+            </p>
+        </div>
+        
+        <div class="col-lg-12" style="justify-content: flex-start; flex-flow: row wrap; display: flex;">
+            @* game diff *@
+            <p class="col-lg-4" style="width: fit-content; display: flex;">
+                <label style="margin-right: 10px;">
+                    Game: 
+                </label>
+                        
+                <InputText style="width: 400px;" @bind-Value="streamPlanning.Game" />
+            </p>
+                        
+            <p class="col-lg-4" style="width: fit-content; display: flex;">
+                <label style="margin-right: 10px;">
+                    Game type: 
+                </label>
+                                    
+                <InputText style="width: 400px;" @bind-Value="streamPlanning.GameType" />
+            </p>
+            
+            <p class="col-lg-4" style="width: fit-content; display: flex;">
+                <label style="margin-right: 10px;">
+                    Trailer: 
+                    
+                </label>
+                                                
+                <InputText style="width: 400px;" @bind-Value="streamPlanning.TrailerUri" />
+            </p>
+        </div>
+        
+        @if (isNew)
+        {
+            <button type="submit" style="font-size: 22px;">Create</button>
+        }
+        else
+        {
+            <button type="submit" style="font-size: 22px;">Save</button>
+        }
+    </EditForm>
+}
+
+@code {
+    [Parameter] public string streamPlanningIdRaw { get; set; }
+    private long streamPlanningId { get; set; }
+    private StreamPlanning streamPlanning { get; set; }
+    private bool isNew { get; set; }
+    private string errorMessage { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if(!await LocalStorageService.IsLoggedInAndMeetsAuthorizationLevel(EAuthorizationLevel.MODERATOR))
+        {
+            NavigationManager.NavigateTo("login");
+            return;
+        }
+
+        this.streamPlanningId = long.Parse(streamPlanningIdRaw);
+        this.isNew = streamPlanningId == 0;
+        streamPlanning = isNew ? new StreamPlanning() : await this.BlbApiHandler.GetStreamPlanningById(streamPlanningId);
+    }
+
+    private async Task Save()
+    {
+        if (isNew) await this.Create();
+        else await this.Update();
+    }
+
+    private async Task Create()
+    {
+        try
+        {
+            await this.BlbApiHandler.CreateStreamPlanning(streamPlanning);
+        }
+        catch (ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            Console.WriteLine($"{apiError.DateTime}: {apiError.Message}");
+            this.errorMessage = apiError.Message;
+        }
+    }
+
+    private async Task Update()
+    {
+        try
+        {
+            await this.BlbApiHandler.UpdateStreamPlanning(streamPlanning);
+        }
+        catch (ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            Console.WriteLine($"{apiError.DateTime}: {apiError.Message}");
+            this.errorMessage = apiError.Message;
+        }
+    }
+
+    private async Task Delete()
+    {
+        try
+        {
+            await this.BlbApiHandler.DeleteStreamPlanning(streamPlanningId);
+            this.NavigationManager.NavigateTo("/streams");
+        }
+        catch (ApiException e)
+        {
+            var apiError = e.ToBlbApiError();
+            Console.WriteLine($"{apiError.DateTime}: {apiError.Message}");
+            this.errorMessage = apiError.Message;
+        }
+    }
+}

@@ -1,0 +1,27 @@
+﻿$color-primary: #292826; // Dark grey
+$color-secondary: #e3e3e3; // White-isch
+$color-tertiary: #73008a; // Purple
+
+
+body {
+    background: $color-primary;
+}
+
+h1, h3, p, label {
+    color: $color-secondary;
+}
+
+button {
+    background: $color-tertiary;
+    color: $color-secondary;
+}
+
+#header {
+    background: $color-tertiary;
+    color: $color-secondary;
+}
+
+.card {
+    background: $color-tertiary;
+    margin-bottom: 20px;
+}

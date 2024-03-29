@@ -1,0 +1,116 @@
+﻿@page "/login" 
+@page "/register"
+@inject BlbApiHandler BlbApiHandler
+@inject NavigationManager NavigationManager
+@inject ILocalStorageService LocalStorageService
+@inject LoggedInStatusManager LoggedInStatusManager
+@inject NotificationManager NotificationManager
+
+<link href="css/loginPage.min.css" rel="stylesheet">
+
+<div>
+    @if (_isAlreadyLoggedIn)
+    {
+        // Log out stuff
+        <h3>Hi @_user.Username</h3>
+        <button @onclick="LogOut">Log out</button>
+    }
+    else
+    {
+        <h3>Login</h3>
+        // Log in stuff
+        @if (ErrorMessage != null)
+        {
+            <p style="color: red;">@ErrorMessage</p>
+        }
+        <EditForm Model="@_user" OnValidSubmit="SubmitLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <p>
+                <label>
+                    Username:
+                    <InputText id="username" @bind-Value="_user.Username" />
+                </label>
+            </p>
+
+            <p>
+                <label>
+                    Password:
+                    <InputText type="password" id="password" @bind-Value="_user.Password" />
+                </label>
+            </p>
+
+            <button type="submit">Log in</button>
+            <button type="submit" @onclick="SetToRegister">Register</button>
+        </EditForm>
+    }
+</div>
+
+
+
+
+@code {
+    private bool _isAlreadyLoggedIn;
+    private User _user = new User();
+    public string ErrorMessage;
+    public bool IsLoginAndNotRegister = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        const string storageKey = "user";
+        if(await this.LocalStorageService.ContainKeyAsync(storageKey))
+        {
+            this._user = await this.LocalStorageService.GetItemAsync<User>(storageKey);
+            _isAlreadyLoggedIn = true;
+            LoggedInStatusManager.SetLoggedInStatus(true);
+        }
+    }
+
+    public void SetToRegister()
+    {
+        this.IsLoginAndNotRegister = false;
+    }
+
+    public async Task SubmitLogin()
+    {
+        try
+        {
+            AuthOutput result;
+            if (IsLoginAndNotRegister)
+            {
+                BlbApiHandler.SetupUser(_user);
+                result = await BlbApiHandler.Authenticate();
+                NotificationManager.SetSuccessNotification($"Welcome back {_user.Username}!");
+            }
+            else
+            {
+                result = await BlbApiHandler.Register(_user);
+                NotificationManager.SetSuccessNotification($"Welcome to the website {_user.Username}!");
+            }
+            this._user.AuthorizationLevel = result.AuthorizationLevel;
+            await LocalStorageService.SetItemAsync<User>("user", this._user);
+            LoggedInStatusManager.SetLoggedInStatus(true);
+            NavigationManager.NavigateTo("commands");
+        }
+        catch (ApiException apiException)
+        {
+            var apiError = apiException.ToBlbApiError();
+            this.ErrorMessage = apiError.Message;
+            Console.WriteLine(apiError.Message);
+        }
+        catch (Exception)
+        {
+            this.ErrorMessage = "Invalid user";
+        }
+    }
+
+    public async Task LogOut()
+    {
+        await this.LocalStorageService.RemoveItemAsync("user");
+        NotificationManager.SetSuccessNotification($"Bye {_user.Username}");
+        this._user = new User();
+        _isAlreadyLoggedIn = false;
+        LoggedInStatusManager.SetLoggedInStatus(false);
+    }
+
+}
